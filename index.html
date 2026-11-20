@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#02030a">
+    <title>ANALOG EARTH — Earth to Moon & Mars</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --cyan: #5ee7ff;
+            --amber: #ffb347;
+            --red: #ff795d;
+            --bg: #02030a;
+            --muted: #8fa6c7;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: var(--bg);
+            color: #e8f1ff;
+            font-family: Inter, system-ui, sans-serif;
+        }
+
+        canvas#c {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            z-index: 0;
+        }
+
+        #trail {
+            position: fixed;
+            inset: 0;
+            z-index: 99;
+            pointer-events: none;
+        }
+
+        body,
+        body * {
+            cursor: auto !important;
+        }
+
+        @media(hover:none) {
+
+            body,
+            body * {
+                cursor: auto !important
+            }
+
+            #trail {
+                display: none !important;
+            }
+        }
+
+        #cur-dot,
+        #cur-ring {
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 100;
+            pointer-events: none;
+            border-radius: 50%;
+            will-change: transform;
+        }
+
+        #cur-dot {
+            width: 20px;
+            height: 20px;
+            margin: -10px;
+            border-radius: 50%;
+            background: radial-gradient(circle,
+                    #ffffff 0%,
+                    #baf7ff 20%,
+                    #42dfff 48%,
+                    #087dff 72%,
+                    transparent 100%);
+            box-shadow:
+                0 0 8px 3px #ffffff,
+                0 0 18px 8px #35dfff,
+                0 0 38px 14px #087dff,
+                0 0 65px 20px #0755ff66;
+        }
+
+        #cur-ring {
+            width: 38px;
+            height: 38px;
+            margin: -19px;
+            border: 1px solid #5ee7ffb3;
+            transition: .2s;
+        }
+
+        #cur-ring.hov {
+            width: 60px;
+            height: 60px;
+            margin: -30px;
+            background: #5ee7ff1c;
+            border-color: var(--amber);
+        }
+
+        .vignette,
+        .scan {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .vignette {
+            background: radial-gradient(ellipse at center, transparent 42%, #000b 100%);
+        }
+
+        .scan {
+            opacity: .045;
+            background: repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 4px);
+        }
+
+        header {
+            position: fixed;
+            z-index: 5;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 24px 34px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .logo {
+            font: 800 14px Orbitron;
+            letter-spacing: .34em;
+        }
+
+        .logo span {
+            color: var(--cyan)
+        }
+
+        .status {
+            font-size: 10px;
+            letter-spacing: .2em;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        .status i {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--cyan);
+            margin-right: 8px;
+            box-shadow: 0 0 10px var(--cyan);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            50% {
+                opacity: .25
+            }
+        }
+
+        .glass {
+            background: #080e1e99;
+            backdrop-filter: blur(14px);
+            border: 1px solid #5ee7ff38;
+            border-radius: 14px;
+            box-shadow: 0 0 35px #5ee7ff0d;
+        }
+
+        .btn {
+            font: 600 10px Orbitron;
+            letter-spacing: .13em;
+            padding: 11px 15px;
+            color: #dffaff;
+            background: #080e1eaa;
+            border: 1px solid #5ee7ff55;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            transition: .25s;
+            cursor: pointer;
+        }
+
+        .btn:hover,
+        .btn.on {
+            background: #5ee7ff2b;
+            box-shadow: 0 0 18px #5ee7ff55;
+            color: white;
+        }
+
+        #planets {
+            position: fixed;
+            top: 78px;
+            left: 30px;
+            z-index: 5;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        #tools {
+            position: fixed;
+            top: 78px;
+            right: 30px;
+            z-index: 5;
+            display: flex;
+            gap: 7px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            max-width: 58%;
+        }
+
+        #list {
+            position: fixed;
+            z-index: 5;
+            left: 30px;
+            top: 137px;
+            bottom: 72px;
+            width: 270px;
+            overflow: auto;
+            padding: 12px;
+        }
+
+        #list h4 {
+            font: 600 10px Orbitron;
+            letter-spacing: .2em;
+            color: #91a8cb;
+            padding: 8px 10px;
+        }
+
+        .item {
+            padding: 11px 12px;
+            border-radius: 9px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            border: 1px solid transparent;
+            transition: .2s;
+        }
+
+        .item:hover,
+        .item.on {
+            background: #5ee7ff19;
+            border-color: #5ee7ff55;
+        }
+
+        .tag {
+            font-size: 9px;
+            letter-spacing: .1em;
+            padding: 3px 7px;
+            border-radius: 20px;
+            white-space: nowrap;
+            align-self: center;
+        }
+
+        .tag.moon {
+            background: #c8d2e626;
+            color: #dfe8f7
+        }
+
+        .tag.mars {
+            background: #ff6b4a2e;
+            color: #ff9a80
+        }
+
+        .tag.both {
+            background: #ffb3472b;
+            color: var(--amber)
+        }
+
+        #panel {
+            position: fixed;
+            z-index: 7;
+            right: 30px;
+            top: 132px;
+            bottom: 70px;
+            width: min(390px, calc(100vw - 28px));
+            padding: 25px;
+            overflow: auto;
+            transform: translateX(115%);
+            transition: transform .65s cubic-bezier(.2, .8, .2, 1);
+        }
+
+        #panel.open {
+            transform: none
+        }
+
+        #panel h2 {
+            font: 600 20px/1.25 Orbitron;
+            margin: 12px 0 6px;
+        }
+
+        #panel p {
+            font-size: 13px;
+            line-height: 1.65;
+            color: #cdd9ee;
+            font-weight: 300;
+            margin: 7px 0;
+        }
+
+        #panel h5 {
+            font: 600 10px Orbitron;
+            letter-spacing: .18em;
+            color: var(--cyan);
+            margin: 18px 0 7px;
+        }
+
+        .loc {
+            font-size: 11px;
+            color: var(--muted);
+            letter-spacing: .06em;
+            margin-bottom: 14px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 9px;
+            margin: 12px 0;
+        }
+
+        .stat {
+            padding: 11px;
+            border-radius: 10px;
+            background: #ffffff0a;
+        }
+
+        .stat b {
+            display: block;
+            font: 600 14px Orbitron;
+            color: white;
+            margin-top: 5px;
+        }
+
+        .stat small {
+            font-size: 9px;
+            color: var(--muted);
+            letter-spacing: .1em;
+            text-transform: uppercase;
+        }
+
+        .problem {
+            border-left: 2px solid var(--amber);
+            padding-left: 12px;
+            color: #ffe6c0 !important;
+        }
+
+        .cmp {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 9px;
+        }
+
+        #close {
+            background: none;
+            border: 0;
+            color: var(--muted);
+            font-size: 24px;
+            position: absolute;
+            right: 15px;
+            top: 10px;
+            z-index: 2;
+        }
+
+        #hint {
+            position: fixed;
+            z-index: 5;
+            bottom: 23px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            letter-spacing: .2em;
+            color: #7188ad;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        #sub {
+            position: fixed;
+            z-index: 5;
+            left: 30px;
+            bottom: 18px;
+            font-size: 10px;
+            line-height: 1.5;
+            color: #7188ad;
+            max-width: 270px;
+        }
+
+        /* FIRST PAGE */
+
+        #intro {
+            position: fixed;
+            z-index: 20;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 0 8vw;
+            background: linear-gradient(90deg,
+                    #02030a 0%,
+                    #02030acc 30%,
+                    #02030a33 58%,
+                    transparent 74%);
+            transition: opacity 1.4s, visibility 1.4s;
+            pointer-events: auto;
+        }
+
+        #intro.hide {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        #intro h1 {
+            font: 800 clamp(42px, 8vw, 112px)/.98 Orbitron;
+            letter-spacing: .045em;
+            background: linear-gradient(180deg, #fff, #8dc7ff 62%, #31518e);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            filter: drop-shadow(0 0 28px #5ee7ff55);
+            animation: rise 1.7s both;
+        }
+
+        #intro .btn {
+            margin-top: 32px;
+            padding: 17px 27px;
+            font-size: 11px;
+            letter-spacing: .2em;
+            border-color: #5ee7ff99;
+            animation: rise 2s .5s both;
+        }
+
+        #intro .btn span {
+            color: var(--cyan);
+            margin-left: 12px;
+        }
+
+        @keyframes rise {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+                filter: blur(8px);
+            }
+        }
+
+        body:not(.on) header,
+        body:not(.on) #planets,
+        body:not(.on) #tools,
+        body:not(.on) #list,
+        body:not(.on) #sub,
+        body:not(.on) #hint {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        body.on header,
+        body.on #planets,
+        body.on #tools,
+        body.on #list,
+        body.on #sub,
+        body.on #hint {
+            opacity: 1;
+            transition: opacity 1.2s;
+        }
+
+        .tool-input {
+            width: 100%;
+            max-width: 180px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #5ee7ff66;
+            background: #080e1ecc;
+            color: white;
+            font: 14px Inter;
+        }
+
+        .tool-note {
+            font-size: 11px !important;
+            color: #91a8cb !important;
+            margin-top: 15px !important;
+        }
+
+        .checklist {
+            display: grid;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .checklist label {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            padding: 10px;
+            border: 1px solid #5ee7ff25;
+            border-radius: 9px;
+            background: #ffffff08;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .checklist input {
+            accent-color: #5ee7ff;
+            margin-top: 2px;
+        }
+
+        .readiness {
+            margin-top: 14px;
+            color: var(--cyan);
+            font: 600 12px Orbitron;
+            letter-spacing: .1em;
+        }
+
+        @media(max-width:900px) {
+            header {
+                padding: 17px 18px
+            }
+
+            #planets {
+                left: 14px;
+                top: 68px
+            }
+
+            #tools {
+                top: 115px;
+                left: 14px;
+                right: 14px;
+                max-width: none;
+                justify-content: flex-start;
+            }
+
+            #list {
+                display: none
+            }
+
+            #panel {
+                left: 14px;
+                right: 14px;
+                top: auto;
+                bottom: 14px;
+                width: auto;
+                height: 58vh;
+            }
+
+            #sub {
+                display: none
+            }
+
+            #intro {
+                padding: 0 7vw;
+                background: linear-gradient(90deg, #02030aee, #02030a66 75%, transparent);
+            }
+
+            #intro h1 {
+                font-size: clamp(42px, 12vw, 82px)
+            }
+
+            #hint {
+                bottom: 18px;
+                font-size: 8px;
+                max-width: 90%;
+                white-space: normal;
+            }
+        }
+
+        @media(max-width:520px) {
+            .status {
+                font-size: 8px
+            }
+
+            #tools .btn {
+                font-size: 8px;
+                padding: 9px 10px
+            }
+
+            #planets .btn {
+                font-size: 9px;
+                padding: 9px 12px
+            }
+        }
+
+        #cur-dot,
+        #cur-ring,
+        #trail {
+            display: none !important;
+        }
+
+        body,
+        body * {
+            cursor: auto !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="c"></canvas>
+    <canvas id="trail"></canvas>
+
+    <div id="cur-ring"></div>
+    <div id="cur-dot"></div>
+    <div class="vignette"></div>
+    <div class="scan"></div>
+
+    <header>
+        <div class="logo">ANALOG <span>EARTH</span></div>
+        <div class="status">
+            <i></i>
+            <span id="stat">SYSTEM READY</span>
+        </div>
+    </header>
+
+    <nav id="planets" aria-label="Select world">
+        <button class="btn on" data-p="earth">EARTH</button>
+        <button class="btn" data-p="moon">MOON</button>
+        <button class="btn" data-p="mars">MARS</button>
+    </nav>
+
+    <nav id="tools" aria-label="Mission tools">
+        <button class="btn" id="probBtn">FIND BY PROBLEM</button>
+        <button class="btn" id="cmpBtn">COMPARE WORLDS</button>
+        <button class="btn" id="resourceBtn">RESOURCE PLANNER</button>
+        <button class="btn" id="commBtn">SIGNAL DELAY</button>
+        <button class="btn" id="checkBtn">READINESS CHECKLIST</button>
+        <button class="btn" id="tourBtn">▶ GUIDED TOUR</button>
+    </nav>
+
+    <aside id="list" class="glass"></aside>
+
+    <section id="panel" class="glass" aria-live="polite">
+        <button id="close" aria-label="Close panel">×</button>
+        <div id="pc"></div>
+    </section>
+
+    <div id="sub">FIELD RESEARCH · HABITAT TESTING · PLANETARY ANALOGS</div>
+
+    <div id="hint">
+        DRAG TO ROTATE · SCROLL TO ZOOM · SELECT A MARKER TO EXPLORE
+    </div>
+
+    <main id="intro" aria-label="Analog Earth welcome">
+        <h1>ANALOG<br>EARTH</h1>
+        <button class="btn" id="enter">
+            BEGIN MISSION <span>↗</span>
+        </button>
+    </main>
+
+    <script src="./data.js"></script>
+    <script type="module" src="./app.js"></script>
+
+</body>
+
+</html>
